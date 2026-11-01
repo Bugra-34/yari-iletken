@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yarı İletkenler & Kristal Fiziği 101</title>
+    <!-- 3D Grafikler için Three.js kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b0f19;
+            --card-bg: #131b2e;
+            --accent: #38bdf8;
+            --accent-green: #34d399;
+            --accent-orange: #fb923c;
+            --text: #f1f5f9;
+            --text-dim: #94a3b8;
+            --border: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        header {
+            text-align: center;
+            padding: 50px 20px 30px;
+            background: linear-gradient(180deg, #172554 0%, var(--bg) 100%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--accent);
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: auto;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .card h2 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent);
+            padding: 2px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+        }
+
+        /* 3D Bölümü */
+        #canvas3d-container {
+            width: 100%;
+            height: 380px;
+            background-color: #030712;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            border: 1px solid #1e293b;
+        }
+        #canvas3d-container:active { cursor: grabbing; }
+
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+            align-items: center;
+        }
+
+        button {
+            background-color: #1e293b;
+            color: var(--text);
+            border: 1px solid #334155;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #334155;
+            border-color: var(--accent);
+        }
+
+        button.active {
+            background-color: var(--accent);
+            color: #040814;
+            font-weight: bold;
+            border-color: var(--accent);
+        }
+
+        /* 2D Canvaslar */
+        canvas.sim-canvas {
+            width: 100%;
+            height: 250px;
+            background: #050814;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: block;
+        }
+
+        .slider-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-top: 15px;
+            background: #080d1a;
+            padding: 12px 20px;
+            border-radius: 10px;
+        }
+
+        .slider-box input[type="range"] {
+            flex-grow: 1;
+            cursor: pointer;
+        }
+
+        /* Quiz */
+        .quiz-option {
+            background: #090e1d;
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .quiz-option:hover {
+            background: #172554;
+            border-color: var(--accent);
+        }
+
+        .expl-box {
+            background: rgba(56, 189, 248, 0.05);
+            border-left: 4px solid var(--accent);
+            padding: 12px 16px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+            color: var(--text-dim);
+            border-radius: 0 8px 8px 0;
+        }
+        .expl-box b { color: var(--text); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Yarı İletken & Kristal Fiziği</h1>
+        <p>Hiç fizik bilmeyenler için sıfırdan, interaktif ve görsel öğrenme rehberi.</p>
+    </header>
+
+    <div class="container">
+
+        <!-- MODÜL 1: 3D KRİSTAL YAPILAR -->
+        <div class="card">
+            <h2><span>1. Kristal Yapılar (3 Boyutlu İncele)</span> <span class="badge">Fareyle Çevir</span></h2>
+            <p style="color:var(--text-dim); margin-bottom:12px;">
+                Atomlar rastgele dizilmez; legolar gibi belirli kurallarla <b>kristal kafes</b> oluştururlar. 
+                Aşağıdaki modeli fareyle (veya parmağınla) tutup 360 derece döndürebilirsin:
+            </p>
+
+            <div class="controls-row">
+                <button class="active" onclick="switchCrystal('diamond')">Silisyum (Elmas Kafesi)</button>
+                <button onclick="switchCrystal('fcc')">FCC (Yüzey Merkezli)</button>
+                <button onclick="switchCrystal('sc')">Basit Kübik (SC)</button>
+            </div>
+
+            <div id="canvas3d-container"></div>
+
+            <div class="expl-box" id="crystal-desc">
+                <b>Silisyum (Diamond Lattice):</b> Yarı iletken çiplerin ana maddesidir. Her silisyum atomu, en kararlı durumuna ulaşmak için etrafındaki tam 4 atoma kovalent bağla kenetlenir.
+            </div>
+        </div>
+
+        <!-- MODÜL 2: BANT TEORİSİ -->
+        <div class="card">
+            <h2><span>2. Bant Teorisi & Bandgap (Elektron Zıplatma)</span> <span class="badge">Simülasyon</span></h2>
+            <p style="color:var(--text-dim); margin-bottom: 12px;">
+                Bir malzemenin elektrik iletebilmesi için elektronların alt kattan (Valans Bandı) üst kata (İletkenlik Bandı) zıplaması gerekir. 
+                İki kat arasındaki uçuruma <b>Yasak Enerji Aralığı (Bandgap)</b> denir.
+            </p>
+
+            <div class="controls-row">
+                <button class="active" onclick="setBandMaterial('semi')">Yarı İletken (Silisyum ~1.1 eV)</button>
+                <button onclick="setBandMaterial('conductor')">İletken (Metal - Uçurum Yok)</button>
+                <button onclick="setBandMaterial('insulator')">Yalıtkan (Cam/Elmas - Uçurum Dev)</button>
+            </div>
+
+            <canvas id="bandCanvas" class="sim-canvas" width="800" height="250"></canvas>
+
+            <div class="slider-box">
+                <label>🔥 <b>Sıcaklık / Enerji Ver:</b></label>
+                <input type="range" id="tempSlider" min="0" max="100" value="15">
+                <span id="tempVal" style="color:var(--accent-orange); font-weight:bold;">Düşük Sıcaklık</span>
+            </div>
+
+            <div class="expl-box" id="band-desc">
+                <b>Yarı İletken Mantığı:</b> Mutlak sıfırda yalıtkandır. Ama ısı veya voltaj verince elektronlar bu küçük uçurumu aşıp yukarı zıplar ve malzeme elektrik iletmeye başlar!
+            </div>
+        </div>
+
+        <!-- MODÜL 3: KATKILAMA (DOPING) -->
+        <div class="card">
+            <h2><span>3. Katkılama (Doping) Fiziği</span> <span class="badge">N-Tipi / P-Tipi</span></h2>
+            <p style="color:var(--text-dim); margin-bottom: 12px;">
+                Saf silisyum tembeldir, akımı az iletir. İletkenliğini trilyonlarca kat artırmak için içine atomik seviyede "yabancı atom" serpiştiririz.
+            </p>
+
+            <div class="controls-row">
+                <button class="active" onclick="setDoping('pure')">Saf Silisyum (Dengesiz/Tembel)</button>
+                <button onclick="setDoping('n-type')">Fosfor Ekle (N-Tipi: Fazla Elektron)</button>
+                <button onclick="setDoping('p-type')">Bor Ekle (P-Tipi: Delik / Hole)</button>
+            </div>
+
+            <canvas id="dopingCanvas" class="sim-canvas" width="800" height="250"></canvas>
+
+            <div class="expl-box" id="doping-desc">
+                <b>Saf Silisyum:</b> Tüm elektronlar bağ kurmuş durumda kilitlidir. Serbestçe dolaşabilen elektron neredeyse hiç yoktur.
+            </div>
+        </div>
+
+        <!-- MODÜL 4: TEST -->
+        <div class="card">
+            <h2><span>4. Bilgi Testi</span> <span class="badge">Öğrendin mi?</span></h2>
+            <p id="quiz-question" style="font-size: 1.1rem; margin-bottom: 15px;"><b>Soru:</b> Silisyum atomunun en dış katmanında kaç valans elektronu bulunur ve kaç bağ yapar?</p>
+            <div id="quiz-options">
+                <div class="quiz-option" onclick="checkQuiz(0)">A) 2 elektronu vardır, 2 bağ yapar.</div>
+                <div class="quiz-option" onclick="checkQuiz(1)">B) 4 elektronu vardır, çevresindeki 4 komşusuyla kovalent bağ yapar.</div>
+                <div class="quiz-option" onclick="checkQuiz(2)">C) 8 elektronu vardır, hiç bağ yapmaz (Soygazdır).</div>
+            </div>
+            <div id="quiz-result" style="margin-top:15px; font-weight:bold;"></div>
+        </div>
+
+    </div>
+
+    <!-- 3D & 2D SCRIPT LOGIC -->
+    <script>
+        /* --- 1. THREE.JS İLE 3D KRİSTAL MOTORU --- */
+        let scene, camera, renderer, crystalGroup;
+        let isDragging = false;
+        let prevMouse = { x: 0, y: 0 };
+
+        function init3D() {
+            const container = document.getElementById('canvas3d-container');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 7);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0x38bdf8, 1.5);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+
+            crystalGroup = new THREE.Group();
+            scene.add(crystalGroup);
+
+            // Mouse Drag Döndürme
+            container.addEventListener('mousedown', (e) => { isDragging = true; prevMouse = { x: e.clientX, y: e.clientY }; });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                const deltaX = e.clientX - prevMouse.x;
+                const deltaY = e.clientY - prevMouse.y;
+                crystalGroup.rotation.y += deltaX * 0.01;
+                crystalGroup.rotation.x += deltaY * 0.01;
+                prevMouse = { x: e.clientX, y: e.clientY };
+            });
+
+            // Mobil Dokunmatik
+            container.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1) {
+                    const touch = e.touches[0];
+                    if (prevMouse.x) {
+                        crystalGroup.rotation.y += (touch.clientX - prevMouse.x) * 0.01;
+                        crystalGroup.rotation.x += (touch.clientY - prevMouse.y) * 0.01;
+                    }
+                    prevMouse = { x: touch.clientX, y: touch.clientY };
+                }
+            }, { passive: true });
+            container.addEventListener('touchend', () => { prevMouse = { x: 0, y: 0 }; });
+
+            buildDiamondLattice();
+            animate3D();
+        }
+
+        function createAtom(x, y, z, color = 0x38bdf8, radius = 0.22) {
+            const geo = new THREE.SphereGeometry(radius, 32, 32);
+            const mat = new THREE.MeshPhongMaterial({ color, shininess: 80 });
+            const atom = new THREE.Mesh(geo, mat);
+            atom.position.set(x, y, z);
+            crystalGroup.add(atom);
+        }
+
+        function createBond(p1, p2) {
+            const v1 = new THREE.Vector3(...p1);
+            const v2 = new THREE.Vector3(...p2);
+            const distance = v1.distanceTo(v2);
+            const cylinder = new THREE.CylinderGeometry(0.04, 0.04, distance, 12);
+            const material = new THREE.MeshBasicMaterial({ color: 0x475569 });
+            const mesh = new THREE.Mesh(cylinder, material);
+            mesh.position.copy(v1.clone().add(v2).multiplyScalar(0.5));
+            mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v2.clone().sub(v1).normalize());
+            crystalGroup.add(mesh);
+        }
+
+        function clearCrystal() {
+            while (crystalGroup.children.length > 0) {
+                crystalGroup.remove(crystalGroup.children[0]);
+            }
+        }
+
+        function switchCrystal(type) {
+            clearCrystal();
+            event.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const desc = document.getElementById('crystal-desc');
+
+            if (type === 'sc') {
+                desc.innerHTML = "<b>Basit Kübik (Simple Cubic):</b> En basit kafes yapısıdır. Küpün sadece 8 köşesinde 1'er atom bulunur. Doğada nadirdir (Polonyum gibi).";
+                const corners = [-1, 1];
+                for(let x of corners) for(let y of corners) for(let z of corners) createAtom(x, y, z, 0x94a3b8);
+                // Çizgiler
+                createBond([-1,-1,-1], [1,-1,-1]); createBond([-1,1,-1], [1,1,-1]);
+                createBond([-1,-1,1], [1,-1,1]); createBond([-1,1,1], [1,1,1]);
+                createBond([-1,-1,-1], [-1,1,-1]); createBond([1,-1,-1], [1,1,-1]);
+                createBond([-1,-1,1], [-1,1,1]); createBond([1,-1,1], [1,1,1]);
+                createBond([-1,-1,-1], [-1,-1,1]); createBond([1,-1,-1], [1,-1,1]);
+                createBond([-1,1,-1], [-1,1,1]); createBond([1,1,-1], [1,1,1]);
+            } else if (type === 'fcc') {
+                desc.innerHTML = "<b>Yüzey Merkezli Kübik (FCC):</b> Küpün 8 köşesine ek olarak her 6 yüzeyin tam ortasında birer atom bulunur. Metallerde (Bakır, Alüminyum, Altın) çok yaygındır.";
+                const c = [-1.2, 1.2];
+                for(let x of c) for(let y of c) for(let z of c) createAtom(x, y, z, 0x94a3b8);
+                createAtom(0, 0, 1.2, 0x38bdf8); createAtom(0, 0, -1.2, 0x38bdf8);
+                createAtom(0, 1.2, 0, 0x38bdf8); createAtom(0, -1.2, 0, 0x38bdf8);
+                createAtom(1.2, 0, 0, 0x38bdf8); createAtom(-1.2, 0, 0, 0x38bdf8);
+            } else {
+                buildDiamondLattice();
+                desc.innerHTML = "<b>Silisyum (Elmas Kafesi):</b> FCC kafesinin içine 4 atom daha sokulmuş halidir. Her atom, 4 bacağı olan bir piramit (tetrahedral) gibi bağlanır. Yarı iletkenliğin kalbidir!";
+            }
+        }
+
+        function buildDiamondLattice() {
+            const s = 1.2;
+            const pts = [
+                [-s,-s,-s],[s,-s,-s],[-s,s,-s],[s,s,-s],
+                [-s,-s,s],[s,-s,s],[-s,s,s],[s,s,s],
+                [0,0,s],[0,0,-s],[0,s,0],[0,-s,0],[s,0,0],[-s,0,0],
+                // İç tetrahedral atomlar (Silisyum bağı)
+                [-s/2,-s/2,-s/2], [s/2,s/2,-s/2], [s/2,-s/2,s/2], [-s/2,s/2,s/2]
+            ];
+            pts.forEach(p => createAtom(p[0], p[1], p[2], 0x38bdf8));
+            // Birkaç sembolik bağ
+            createBond([-s/2,-s/2,-s/2], [-s,-s,-s]);
+            createBond([-s/2,-s/2,-s/2], [0,0,-s]);
+            createBond([s/2,s/2,-s/2], [s,s,-s]);
+            createBond([s/2,-s/2,s/2], [s,-s,s]);
+        }
+
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            if (!isDragging) {
+                crystalGroup.rotation.y += 0.003;
+            }
+            renderer.render(scene, camera);
+        }
+
+        /* --- 2. BANT TEORİSİ SİMÜLASYONU (2D Canvas) --- */
+        const bandCanvas = document.getElementById('bandCanvas');
+        const bCtx = bandCanvas.getContext('2d');
+        let currentMaterial = 'semi';
+        let electrons = [];
+
+        for(let i=0; i<35; i++) {
+            electrons.push({
+                x: 60 + Math.random() * 680,
+                y: 190 + Math.random() * 35,
+                baseY: 200,
+                isJumping: false,
+                jumpTimer: 0
+            });
+        }
+
+        function setBandMaterial(mat) {
+            currentMaterial = mat;
+            event.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const d = document.getElementById('band-desc');
+            if(mat === 'conductor') d.innerHTML = "<b>İletken (Metal):</b> Uçurum yok! İki bant iç içedir. Elektronlar oda sıcaklığında bile özgürce akar, bu yüzden metaller kablolarda kullanılır.";
+            else if(mat === 'insulator') d.innerHTML = "<b>Yalıtkan (Cam/Taş):</b> Uçurum o kadar geniştir ki (ör. > 5 eV), atomu yakıp yok etmeden elektronları üst kata zıplatamazsın.";
+            else d.innerHTML = "<b>Yarı İletken (Silisyum):</b> Uçurum küçüktür (~1.1 eV). Isı veya voltaj verdiğin an elektronlar zıplar ve akım başlar.";
+        }
+
+        document.getElementById('tempSlider').addEventListener('input', (e) => {
+            const v = e.target.value;
+            const t = document.getElementById('tempVal');
+            if(v < 30) t.innerText = "Düşük Sıcaklık (Yalıtkan Gibi)";
+            else if(v < 70) t.innerText = "Oda Sıcaklığı (İletkenlik Başlıyor)";
+            else t.innerText = "Yüksek Sıcaklık / Yüksek Enerji (Akım Akıyor!)";
+        });
+
+        function drawBandSim() {
+            bCtx.clearRect(0, 0, bandCanvas.width, bandCanvas.height);
+            const temp = document.getElementById('tempSlider').value;
+
+            // Bant yükseklikleri
+            let condY = 40;
+            let valY = 180;
+            let gapName = "Yasak Enerji Aralığı (Bandgap ~ 1.1 eV)";
+
+            if(currentMaterial === 'conductor') {
+                condY = 110; valY = 120;
+                gapName = "Bantlar Çakışık (Gap Yok = Serbest Akım)";
+            } else if(currentMaterial === 'insulator') {
+                condY = 20; valY = 210;
+                gapName = "Aşırı Büyük Bandgap (> 5 eV)";
+            }
+
+            // İletkenlik Bandı (Üst)
+            bCtx.fillStyle = "rgba(52, 211, 153, 0.15)";
+            bCtx.strokeStyle = "#34d399";
+            bCtx.fillRect(50, 10, 700, condY);
+            bCtx.strokeRect(50, 10, 700, condY);
+            bCtx.fillStyle = "#34d399";
+            bCtx.font = "bold 14px sans-serif";
+            bCtx.fillText("İletkenlik Bandı (Conduction Band) - Serbest Elektronlar Burada Akım Taşır", 65, 30);
+
+            // Valans Bandı (Alt)
+            bCtx.fillStyle = "rgba(56, 189, 248, 0.15)";
+            bCtx.strokeStyle = "#38bdf8";
+            bCtx.fillRect(50, valY, 700, 240 - valY);
+            bCtx.strokeRect(50, valY, 700, 240 - valY);
+            bCtx.fillStyle = "#38bdf8";
+            bCtx.fillText("Valans Bandı (Valence Band) - Bağlara Kilitli Elektronlar", 65, valY + 25);
+
+            // Yasak Enerji Aralığı Yazısı
+            if(currentMaterial !== 'conductor') {
+                bCtx.fillStyle = "#fb923c";
+                bCtx.font = "12px sans-serif";
+                bCtx.fillText("⛔ " + gapName, 300, (condY + valY) / 2 + 5);
+            }
+
+            // Elektronları Çiz & Zıplat
+            electrons.forEach(el => {
+                let chance = temp / 100;
+                if(currentMaterial === 'conductor') chance = 0.95;
+                if(currentMaterial === 'insulator') chance = chance * 0.05;
+
+                if(!el.isJumping && Math.random() < chance * 0.03) {
+                    el.isJumping = true;
+                    el.jumpTimer = 0;
+                }
+
+                if(el.isJumping) {
+                    el.jumpTimer += 0.05;
+                    el.y = (valY + 10) - Math.sin(el.jumpTimer) * (valY - condY + 20);
+                    if(el.jumpTimer > Math.PI) {
+                        el.isJumping = false;
+                        el.y = valY + 10 + Math.random()*20;
+                    }
+                }
+
+                bCtx.beginPath();
+                bCtx.arc(el.x, el.y, 5, 0, Math.PI * 2);
+                bCtx.fillStyle = el.isJumping ? "#fbbf24" : "#38bdf8";
+                bCtx.shadowColor = el.isJumping ? "#fbbf24" : "transparent";
+                bCtx.shadowBlur = el.isJumping ? 10 : 0;
+                bCtx.fill();
+                bCtx.shadowBlur = 0;
+            });
+
+            requestAnimationFrame(drawBandSim);
+        }
+
+        /* --- 3. DOPING (KATKILAMA) MOTORU --- */
+        const dopingCanvas = document.getElementById('dopingCanvas');
+        const dCtx = dopingCanvas.getContext('2d');
+        let dopingType = 'pure';
+        let freeElectronX = 400;
+
+        function setDoping(type) {
+            dopingType = type;
+            event.target.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            const desc = document.getElementById('doping-desc');
+
+            if(type === 'n-type') {
+                desc.innerHTML = "<b>N-Tipi (Negative):</b> Silisyumun (4 elektronlu) arasına 5 elektronlu Fosfor koyduk! 4 elektron bağ kurdu, 5. elektron açıkta kaldı ve kafesin içinde çılgın gibi serbestçe gezmeye başladı.";
+            } else if(type === 'p-type') {
+                desc.innerHTML = "<b>P-Tipi (Positive):</b> Silisyumun arasına 3 elektronlu Bor koyduk! 1 elektron eksik kaldı! Bu eksikliğe <b>Delik (Hole)</b> denir ve tıpkı pozitif bir yükmüş gibi komşu elektronları kendine çekerek akım oluşturur.";
+            } else {
+                desc.innerHTML = "<b>Saf Silisyum:</b> Bütün atomlar 4 elektronuyla birbirini sıkıca tutar. Serbest yük taşıyıcı yoktur.";
+            }
+        }
+
+        function drawDopingSim() {
+            dCtx.clearRect(0, 0, dopingCanvas.width, dopingCanvas.height);
+
+            const grid = [
+                {x: 250, y: 70, name: "Si"}, {x: 400, y: 70, name: "Si"}, {x: 550, y: 70, name: "Si"},
+                {x: 250, y: 150, name: "Si"}, 
+                {x: 400, y: 150, name: dopingType === 'n-type' ? 'P (Fosfor)' : (dopingType === 'p-type' ? 'B (Bor)' : 'Si')}, 
+                {x: 550, y: 150, name: "Si"},
+                {x: 250, y: 220, name: "Si"}, {x: 400, y: 220, name: "Si"}, {x: 550, y: 220, name: "Si"}
+            ];
+
+            // Bağ çizgileri
+            dCtx.strokeStyle = "#334155";
+            dCtx.lineWidth = 3;
+            // Yatay çizgiler
+            [70, 150, 220].forEach(y => {
+                dCtx.beginPath(); dCtx.moveTo(250, y); dCtx.lineTo(550, y); dCtx.stroke();
+            });
+            // Dikey çizgiler
+            [250, 400, 550].forEach(x => {
+                dCtx.beginPath(); dCtx.moveTo(x, 70); dCtx.lineTo(x, 220); dCtx.stroke();
+            });
+
+            // Atomları Çiz
+            grid.forEach(node => {
+                dCtx.beginPath();
+                dCtx.arc(node.x, node.y, 22, 0, Math.PI * 2);
+                if(node.name.includes("Fosfor")) dCtx.fillStyle = "#3b82f6";
+                else if(node.name.includes("Bor")) dCtx.fillStyle = "#ec4899";
+                else dCtx.fillStyle = "#1e293b";
+                dCtx.fill();
+                dCtx.strokeStyle = "#64748b";
+                dCtx.stroke();
+
+                dCtx.fillStyle = "#fff";
+                dCtx.font = "bold 12px sans-serif";
+                dCtx.textAlign = "center";
+                dCtx.textBaseline = "middle";
+                dCtx.fillText(node.name, node.x, node.y);
+            });
+
+            // N-Tipi Serbest Elektron Hareketi
+            if(dopingType === 'n-type') {
+                freeElectronX += 2;
+                if(freeElectronX > 700) freeElectronX = 100;
+
+                dCtx.beginPath();
+                dCtx.arc(freeElectronX, 120 + Math.sin(freeElectronX*0.05)*20, 7, 0, Math.PI * 2);
+                dCtx.fillStyle = "#fbbf24";
+                dCtx.shadowColor = "#fbbf24";
+                dCtx.shadowBlur = 12;
+                dCtx.fill();
+                dCtx.shadowBlur = 0;
+
+                dCtx.fillStyle = "#fbbf24";
+                dCtx.font = "12px sans-serif";
+                dCtx.fillText("Serbest Elektron (-)", freeElectronX, 95 + Math.sin(freeElectronX*0.05)*20);
+            }
+
+            // P-Tipi Boşluk (Delik) Gösterimi
+            if(dopingType === 'p-type') {
+                dCtx.beginPath();
+                dCtx.arc(430, 150, 8, 0, Math.PI * 2);
+                dCtx.strokeStyle = "#ec4899";
+                dCtx.setLineDash([3, 3]);
+                dCtx.lineWidth = 2;
+                dCtx.stroke();
+                dCtx.setLineDash([]);
+                dCtx.fillStyle = "#ec4899";
+                dCtx.font = "12px sans-serif";
+                dCtx.fillText("Delik / Hole (+)", 490, 150);
+            }
+
+            requestAnimationFrame(drawDopingSim);
+        }
+
+        /* --- 4. TEST SİSTEMİ --- */
+        function checkQuiz(index) {
+            const res = document.getElementById('quiz-result');
+            if(index === 1) {
+                res.innerHTML = "🎉 DOĞRU! Silisyum 4 valans elektronuna sahiptir ve 4 komşusuyla kovalent bağ yaparak meşhur elmas kafesini kurar.";
+                res.style.color = "var(--accent-green)";
+            } else {
+                res.innerHTML = "❌ Yanlış! Tekrar dene kral. İpucu: Silisyum periyodik tablonun 4. grubundadır.";
+                res.style.color = "#f87171";
+            }
+        }
+
+        // Başlat
+        window.onload = () => {
+            init3D();
+            drawBandSim();
+            drawDopingSim();
+        };
+    </script>
+</body>
+</html>
